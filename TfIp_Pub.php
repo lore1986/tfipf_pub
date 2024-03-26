@@ -12,7 +12,7 @@ include_once(plugin_dir_path(__DIR__ ) . 'tfIp_Pub/classes/TfIpfDatabase.php');
 include_once(plugin_dir_path(__DIR__ ) . 'tfIp_Pub/classes/TfIpfEvents.php');
 include_once(plugin_dir_path(__DIR__ ) . 'tfIp_Pub/classes/TfIpfBookings.php');
 include_once(plugin_dir_path(__DIR__ ) . 'tfIp_Pub/classes/TfIpfManager.php');
-
+include_once(plugin_dir_path(__DIR__ ) . 'tfIp_Pub/classes/TfIpfAdmin.php');
 
 
 register_activation_hook( __FILE__, 'tf_ipf_registration_handler' );
@@ -23,6 +23,9 @@ $calendar = new Tf_Ipf_Calendar($database);
 $event = new Tf_Ip_Event();
 $manager  = new Tf_Ipf_Manager();
 $bookings = new Tf_Ipf_Booking($database, $manager);
+$admin = new Tf_Ipf_Admin();
+
+
 
 function tf_ipf_registration_handler()
 {
@@ -61,56 +64,80 @@ add_action( 'wp_ajax_nopriv_tf_ipf_create_booking', array( $bookings, 'tfIpf_cre
 add_action( 'wp_ajax_tf_ipf_confirm_booking', array( $bookings, 'tfIpf_final_booking_confirm'));
 add_action( 'wp_ajax_nopriv_tf_ipf_confirm_booking', array( $bookings, 'tfIpf_final_booking_confirm'));
 
-add_action( 'before_delete_post', [$bookings, 'tfIpf_booking_delete'], 10, 2 );
+
 
 add_action( 'wp_ajax_tf_ipf_filter_events', array( $database, 'tfIpf_filter_events'));
+
+add_action( 'wp_ajax_tfipf_return_edit_booking_form_ajax', array( $calendar, 'tfipf_return_edit_booking_form_ajax'));
+add_action( 'wp_ajax_ifpsave_edit_booking', array( $calendar, 'ifpsave_edit_booking'));
+
+
 
 
 add_shortcode( 'tfIpfCalendarShort', 'tfIpf_calendar_all_event_shortcode' );
 add_shortcode( 'tfIpfNoEventBooking', 'tfIpf_noEvent_booking_shortcode' );
 
+$plugin = plugin_basename( __FILE__ );
+//add_filter( "plugin_action_links_$plugin", [$admin, 'plugin_add_settings_link'] );
+add_filter( "plugin_action_links_$plugin", [$admin,'tfipf_add_settings_link'] );
 
-function tfIpf_calendar_all_event_shortcode()
+function tfIpf_calendar_all_event_shortcode($atts)
 {
-    return '<div class="mb-5"><p>Filtra per tipo di evento:</p>
-                <button type="button" class="btn btn-sport">Sport</button>
-                <button type="button" class="btn btn-degustazione">Degustazione</button>
-                <button type="button" class="btn btn-music">Live Music</button>
-            </div>
+    $max_num = isset($atts['maxnum']) ? $atts['maxnum'] : -1;
 
-            <div class="row">
-                <div id="container-booking" class="col-12" style=\'display:none;\'>
+    $html = '<div class="row">
+                <div id="container-booking" class="col-12" style="display:none;">
                 </div>
                 <div id="container-list-events" class="col-12">
                 </div>
             </div>';
+    $html .= '
+            <script>
+                window.onload = function() {
+                    ajax_call_calendar(' . $max_num . ');
+                };
+            </script>
+        ';
+
+    return $html;
+    exit();
 }
 
 function tfIpf_noEvent_booking_shortcode()
 {
     return '
-            <div class="calendario-prenotazione">
+    <style>
+    // .bootstrap-datetimepicker-widget{
+    //     display:block;
+    // }
+    </style><div class="calendario-prenotazione">
                 <div id="container-booking">
-                    <input type=date id="client_date" name="client_date" />
-                    <input  id="client_time" name="client_time" />
-                    <button type="button" id="button-no-event-booking" class="btn btn-success">Prenota</button>
+                    <div class="relative-container" style="position: relative;" >
+                        <input type="text" id="client_date"  class="dropdown" name="client_date"/>
+                    </div>
+                    <div class="relative-container" style="position: relative;" >
+                        <input type="text" id="client_time" name="client_time" />
+                    </div>
+                    <button type="button" id="button-no-event-booking" onclick="BookNoEvent()" class="btn btn-success">Prenota</button>
                 </div>
                 <div id="error-booking-noevent">
                 </div>
             </div>
             <script>
-
             jQuery(document).ready(function($) {
 
-                $(\'#client_time\').timepicker({
-                    timeFormat: \'H:mm\',
-                    interval: 15,
-                    minTime: \'5:00pm\',
-                    maxTime: \'11:59pm\',
-                    defaultTime: \'20\',
-                    dynamic: false,
-                    dropdown: true,
-                    scrollbar: true
+                $(\'#client_time\').datetimepicker({
+                    format: \'H:mm\',
+                });
+                
+                $(\'#client_date\').datetimepicker({
+                    format: \'DD MMM YYYY\',
+                    viewMode: \'days\',
+                    widgetPositioning: {
+                        vertical: \'bottom\', // always opens to buttom direction
+                    },
+                    minDate: moment(),
+                    defaultDate: moment(), 
                 });
             });
 
@@ -120,27 +147,29 @@ function tfIpf_noEvent_booking_shortcode()
 
 function tf_ipf_enqueue_scripts() {
 
-    wp_enqueue_style('tfIpfStyle', plugin_dir_url(__FILE__) . 'static/css/style.css');
+    //wp_enqueue_script('jquery');
+    //wp_enqueue_script('moment-js', 'https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.15.1/moment.min.js', array(), '2.15.1', true);
 
-    wp_enqueue_script('tf_ipf_calendar_js',  plugin_dir_url(__FILE__) . 'static/js/calendar_js.js', array('jquery'), '1.0.0', true );
-    wp_localize_script('tf_ipf_calendar_js', 'ajaxurl', admin_url('admin-ajax.php'));
+    // Enqueue Bootstrap 
+    //wp_enqueue_script('bootstrap-js', 'https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js', array('jquery'), '3.3.7', true);
+    //wp_enqueue_style('bootstrap-css', 'https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css', array(), '3.3.7');
 
+    // Enqueue Bootstrap DateTimePicker JavaScript
+    // wp_enqueue_script('bootstrap-datetimepicker-js', 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.7.14/js/bootstrap-datetimepicker.min.js', array('jquery', 'moment-js'), '4.7.14', true);
+    // wp_enqueue_style('bootstrap-datetimepicker-css', 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.7.14/css/bootstrap-datetimepicker.min.css', array(), '4.7.14');
+
+    //wp_enqueue_style('bootstrap-glyphicons', 'https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css');
+
+    wp_register_script( 'bootstrap-datepicker', 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.0/js/bootstrap-datepicker.js', array( 'jquery' ), '1.3.0', true );
+    wp_enqueue_script( 'bootstrap-datepicker' );
+        
     wp_enqueue_style('intlTelInput', 'https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css');
     wp_enqueue_script('intlTelInput', 'https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js', array('jquery'), null, true);
 
-    wp_enqueue_style('timepickercss', 'https://cdnjs.cloudflare.com/ajax/libs/timepicker/1.3.5/jquery.timepicker.min.css');
-    wp_enqueue_script('timepickerjs', 'https://cdnjs.cloudflare.com/ajax/libs/timepicker/1.3.5/jquery.timepicker.min.js', array('jquery'), null, true);
-
-
     wp_enqueue_script('tf_ipf_booking_event_js',  plugin_dir_url(__FILE__) . 'static/js/event_booking.js', array('jquery'));
+    wp_enqueue_script('tf_ipf_calendar_js',  plugin_dir_url(__FILE__) . 'static/js/calendar_js.js', array('jquery'), '1.0.0', true );
+    wp_localize_script('tf_ipf_calendar_js', 'ajaxurl', admin_url('admin-ajax.php'));
 
-    if(is_page( array( 'Evento') ) ){
-        wp_enqueue_script('tf_ipf_event_js',  plugin_dir_url(__FILE__) . 'static/js/event_js.js', array('jquery'));
-    }
-
-    if(is_page( array( 'Prenotazioni') ) ){
-        wp_enqueue_script('tf_ipf_event_js',  plugin_dir_url(__FILE__) . 'static/js/prenotazioni_admin.js', array('jquery'));
-    }
 
 }
 

@@ -34,9 +34,9 @@
 
 <div id="primary">
     <div id="content" class="site-content" role="main">
-        <div class="container mt-5">
+        <div class="container-fluid mt-5">
             <div class="row m-2 text-center">
-                <div class="col-7">
+                <div class="col-12">
                     <div class="row">
                         <div class="col-1 offset-3">
                             <button class="btn btn-primary" onclick="ajax_call_calendar(0)"  id="prev-month"> < </button>
@@ -63,11 +63,16 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-5">
+                <div class="col-7 mt-3">
                     <div class="row">
                         <h4>Le Prenotazioni</h4>
                     </div>
                     <div class="row" id="calendar-bookings">
+                    
+                    </div>
+                </div>
+                <div class="col-4 mt-3">
+                    <div class="row" id="single-booking">
                     
                     </div>
                 </div>

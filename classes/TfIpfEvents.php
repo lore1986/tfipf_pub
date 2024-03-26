@@ -6,82 +6,8 @@ class Tf_Ip_Event
     {
         add_action( 'init', [$this ,'tfIpf_register_event_post_type'] );
         add_action( 'save_post', [$this, 'save_tfIpf_meta_event_box_data'] );
-
-        //add_filter('query_vars', [$this, 'parameter_queryvars'] );
-
-        //add_filter( 'page_link',  [$this, 'add_custom_param_to_template_link'], 10, 3 );
-        //add_filter( 'post_type_link', [$this, 'tfIpf_max_booking_tfipfbooking_onevent'], 10, 2 );
     }
-
-   
-
-    // function parameter_queryvars( $qvars ) {
-    //     $qvars[] = 'myvar';
-    //     return $qvars;
-    // }
-
-    // function add_custom_param_to_template_link( $permalink, $post_id, $sample ) {
-        
-
-    //     if ( is_page_template( 'tfipfevent' ) ) {
-            
-    //         $event_date = get_post_meta( $post_id, '_tfIpf_event_date_time', true );
-    //         $event_date_formatted = date('Y-m-d', $event_date);
     
-    //         $table_name = $wpdb->prefix . 'ipf_bookings';
-    
-    //         $participants_sum = $wpdb->get_var( 
-    //             $wpdb->prepare( 
-    //                 "SELECT SUM(participants) 
-    //                 FROM $table_name 
-    //                 WHERE DATE(date_book) = %s",
-    //                 $event_date_formatted
-    //             ) 
-    //         );
-            
-    //         $participants_sum == null ? 0 : $participants_sum;
-    
-    //         $max_participants = get_post_meta( $post_id, '_tfIpf_event_max_participants', true );
-    
-    //         $available = $max_participants - $participants_sum;
-
-
-    //         $permalink = add_query_arg( 'available', $available , $permalink );
-
-    //     }
-    //     return $permalink;
-    // }
-    
-
-    function tfIpf_max_booking_tfipfbooking_onevent( $url, $post ) {
-
-        global $wpdb;
-    
-        $event_date = get_post_meta( $post->ID, '_tfIpf_event_date_time', true );
-        $event_date_formatted = date('Y-m-d', $event_date);
-
-        $table_name = $wpdb->prefix . 'ipf_bookings';
-
-        $participants_sum = $wpdb->get_var( 
-            $wpdb->prepare( 
-                "SELECT SUM(participants) 
-                FROM $table_name 
-                WHERE DATE(date_book) = %s",
-                $event_date_formatted
-            ) 
-        );
-        
-        // Fix typo here: $participants_sum instead of $participants
-        $participants_sum == null ? 0 : $participants_sum;
-
-        $max_participants = get_post_meta( $post->ID, '_tfIpf_event_max_participants', true );
-
-        $available = $max_participants - $participants_sum;
-
-        
-        // global $wp_query;
-        // $wp_query->query_vars['available'] = $available;
-    }
 
     function tfIpf_register_event_post_type() {
 
@@ -140,7 +66,7 @@ class Tf_Ip_Event
 
     function tf_ipf_event__meta_box_callback( $post ) {
 
-        // Add a nonce field so we can check for it later.
+       
         wp_nonce_field( 'tf_ipf_nonce_global', 'tfIpf_one_once' );
 
         //$event_description = get_post_meta( $post->ID, '_tfIpf_event_description', true );
@@ -153,8 +79,6 @@ class Tf_Ip_Event
         $image_p = get_post_meta( $post->ID, '_tfIpf_event_image', true );
         $teamone = get_post_meta($post->ID, '_tfIpf_event_team_one', true);
         $teamtwo = get_post_meta($post->ID, '_tfIpf_event_team_two', true);
-        $bandname = get_post_meta($post->ID, '_tfIpf_event_band_name', true);
-        $piatto = get_post_meta($post->ID, '_tfIpf_event_piatto', true);
 
         $max_participants = get_post_meta($post->ID, '_tfIpf_event_max_participants', true);
         $bookingrecv = 'to be calculated';
@@ -183,21 +107,6 @@ class Tf_Ip_Event
             <input type="text" id="teamtwo" value="<?php echo $teamtwo ?>" name="teamtwo">
         </div>
 
-        <div id="music_fields" style="display: <?php echo ($type_event === 'music') ? 'block' : 'none'; ?>; margin: 10px;">
-            <label style="width:80%" for="bandname"><?php _e('Band Name:', 'textdomain'); ?></label>
-            <input style="width:80%" type="text" value="<?php echo $bandname ?>" id="bandname" name="bandname"><br>
-        </div>
-
-        <div id="food_fields" style="display: <?php echo ($type_event === 'food') ? 'block' : 'none'; ?>; margin: 10px;">
-            <label style="width:80%" for="piatto"><?php _e('Piatto Forte:', 'textdomain'); ?></label>
-            <input style="width:80%" type="text" value="<?php echo $piatto ?>" id="piatto" name="piatto"><br>
-        </div>
-
-        <!-- <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
-            <label for="description_event"><?php _e('Description Event:', 'textdomain'); ?></label>
-            <textarea id="description_event" style="width:100%; height: 200px; margin-bottom: 10px;" name="description_event"><?php echo esc_textarea($event_description); ?></textarea><br>
-        </div> -->
-
         <div style="display: flex; flex-direction: column; margin-bottom: 10px;">
             <label for="maxnum"><?php _e('Numero Massimo Prenotazioni: ', 'textdomain'); ?></label>
             <input type="text" id="maxnum" name="maxnum" value="<?php echo esc_attr($max_participants); ?>" style="margin-bottom: 10px;">
@@ -209,18 +118,17 @@ class Tf_Ip_Event
     
         <script>
             document.addEventListener('DOMContentLoaded', function() {
+
                 var typeEventSelect = document.getElementById('type_event');
+                
                 var sportFields = document.getElementById('sport_fields');
-                var musicFields = document.getElementById('music_fields');
-                var foodFields = document.getElementById('food_fields');
+
 
 
                 function toggleFields() {
                     var selectedType = typeEventSelect.value;
 
                     sportFields.style.display = (selectedType === 'sport') ? 'block' : 'none';
-                    musicFields.style.display = (selectedType === 'music') ? 'block' : 'none';
-                    foodFields.style.display = (selectedType === 'food') ? 'block' : 'none';
                 }
 
                 toggleFields();
@@ -315,8 +223,6 @@ class Tf_Ip_Event
         //$time_event =  $_POST['event_time'];
         $event_type = $_POST['type_event'];
         $maxnum = $_POST['maxnum'];
-        $bandname = $_POST['bandname'];
-        $piatto = $_POST['piatto'];
         $teamone = $_POST['teamone'];
         $teamtwo = $_POST['teamtwo'];
         
@@ -330,8 +236,6 @@ class Tf_Ip_Event
         update_post_meta( $post_id, '_tfIpf_event_type', $event_type );
         update_post_meta( $post_id, '_tfIpf_event_team_one', $teamone );
         update_post_meta( $post_id, '_tfIpf_event_team_two', $teamtwo );
-        update_post_meta( $post_id, '_tfIpf_event_band_name', $bandname );
-        update_post_meta( $post_id, '_tfIpf_event_piatto', $piatto );
         update_post_meta( $post_id, '_tfIpf_event_max_participants', $maxnum );
 
         

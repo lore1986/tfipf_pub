@@ -58,14 +58,14 @@
                         <h3>Prenota un tavolo:</h3>
                         <form id="regForm" class="form-prenota-evento" action="#prenota-online" method="POST" >
                             <div class="tab form-row">
-                                <input name="bookingid" style="display:none;" value="<?php echo $post_id ?>" />
+                                <input name="eventid" style="display:none;" value="<?php echo $post_id ?>" />
                                 <div class="form-group col-12">
                                     <label for="nomecompleto">Nome completo</label>
                                     <input type="text" id="uname" name="uname"  class="form-control" placeholder="Nome completo" >
                                 </div>
                                 <div class="form-group ">
                                     <label for="exampleFormControlSelect1">Persone</label>
-                                    <input type="number" min="1" max="<?php echo $max_participants ?>" data-max="<?php echo $max_participants ?>" class="form-control"  id="uguest" name="uguest" placeholder="Numero di partecipanti">
+                                    <input type="number" min="1" max="20" class="form-control"  id="uguest" name="uguest" placeholder="Numero di partecipanti">
                                 </div>
                             </div>
                             <div class="tab">
@@ -74,10 +74,10 @@
                                     <input type="text" class="form-control" placeholder="Telefono"  id="uphone" name="uphone"  ><br>
                                     <small id="telefono" class="form-text text-muted">Riceverai un messaggio di conferma per la tua prenotazione.</small>
                                 </div>
-                                <div class="form-group">
+                                <!-- <div class="form-group">
                                     <label for="indirizzoemail">E-mail</label>
                                     <input type="email" id="uemail" name="uemail"  class="form-control" placeholder="E-mail">
-                                </div>
+                                </div> -->
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="condition" name="condition" onclick="SetValueCheckBox(this)" value="0" >
                                     <label class="form-check-label" for="condition">

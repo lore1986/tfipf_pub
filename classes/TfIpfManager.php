@@ -11,10 +11,10 @@ class Tf_Ipf_Manager
     {
         $this->version = 'v18.0'; 
         $this->code_id = '261127417074544';
-        $this->access_token = 'EAADEZBtPVxdsBO1v1QFnU1k4SZACrCDts9TjakxBCdQYFCE08LEZCkaY1GTBorc0e9ePH2nK8TCkYSVZBdGntKgC4EE1yMddjrZBE30dB0ZCz9Cxf5SBFRg0KyPRjw31GUsh48jWo8ZB8HI8cuH6Gc2V0J43STuvcNXilzxClIcCfLIspJdszNrfTxXZBHm93JxGU8Xi8KGcZAjJTTPCCXeQZD';
+        $this->access_token =  get_option( 'tfipf_whatsapp_token' );
     }   
 
-    function tf_ipf_send_confirmation($receiver) {
+    function tf_ipf_send_confirmation($phone, $code, $identification, $date_long, $participants) {
 
         $endpoint_url = 'https://graph.facebook.com/' . $this->version . '/' . $this->code_id . '/messages';
     
@@ -27,7 +27,7 @@ class Tf_Ipf_Manager
         $body = array(
             'messaging_product' => 'whatsapp',
             'recipient_type' => 'individual',
-            'to' =>  $receiver->phone,
+            'to' =>  $phone,
             'type' => 'template',
             'template' => array(
                 "name" => "customer_confirm",
@@ -36,10 +36,10 @@ class Tf_Ipf_Manager
                     array(
                         "type" => "body",
                         "parameters" => array(
-                            array("type" => "text", "text" => $receiver->identification),
-                            array("type" => "text", "text" => $receiver->code),
-                            array("type" => "text", "text" => date('d/m/Y', $receiver->date)),
-                            array("type" => "text", "text" => $receiver->participants)
+                            array("type" => "text", "text" => $identification),
+                            array("type" => "text", "text" => $code),
+                            array("type" => "text", "text" => date('d/m/Y', $date_long)),
+                            array("type" => "text", "text" => $participants)
                         )
                     )
                 )

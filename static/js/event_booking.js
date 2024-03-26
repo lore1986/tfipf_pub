@@ -1,5 +1,4 @@
 
-
 function SetValueCheckBox(el)
 {
     if(el.value == 1)

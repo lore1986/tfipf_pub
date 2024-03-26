@@ -45,30 +45,7 @@ class Tf_Ipf_Calendar {
     }
 
 
-    /*
-    * Always call this function to update internal date
-    */
-    function update_starting_date($in_date, $direct)
-    {
-        $date1 = strtr($in_date, '/', '-');
 
-        $timestamp = strtotime($date1);
-        $phpDateString = date('d-m-Y', $timestamp);
-
-        $direction = sanitize_text_field($direct);
-        $date = DateTime::createFromFormat('d-m-Y', $phpDateString);
-
-        if ($direction == 1) {
-            $date->modify('+1 month');
-        } else if($direction == 0){
-            $date->modify('-1 month');
-        }
-
-        $this->startingDate = $date->format('d-m-Y');
-
-    }
-
-    
     public function get_day_bookings()
     {
         $startingDate = 0;
@@ -77,44 +54,58 @@ class Tf_Ipf_Calendar {
         if(isset($_POST["timestampdate"]))
         {
             $startingDate = date('Y-m-d', $_POST["timestampdate"]);
-            $results = $this->_ipfDatabase->tfIpf_query_bookings_on_date_noCount($startingDate);
+
+
+            $results = $this->_ipfDatabase->tfIpf_query_bookings_on_date_noCount(strtotime($startingDate));
 
             $html .= '<div class="row">';
 
-            $html .= '<div class="col-sm-3">';
-            $html .= '<span class="font-weight-bold">Status</span>';
+            $html .= '<div class="col-sm-1">';
+            $html .= '<span class="font-weight-bold">Stato</span>';
             $html .= '</div>';
-
-            $html .= '<div class="col-sm-3">';
-            $html .= '<span class="font-weight-bold">Time</span>';
-            $html .= '</div>';
-
+            
             $html .= '<div class="col-sm-3">';
             $html .= '<span class="font-weight-bold">Identification</span>';
             $html .= '</div>';
 
-            $html .= '<div class="col-sm-3">';
-            $html .= '<span class="font-weight-bold">Participants</span>';
+            $html .= '<div class="col-sm-2">';
+            $html .= '<span class="font-weight-bold">Phone Number</span>';
             $html .= '</div>';
 
-            $html .= '</div>'; // End of label row
+
+            $html .= '<div class="col-sm-1">';
+            $html .= '<span class="font-weight-bold">Time</span>';
+            $html .= '</div>';
+
+            $html .= '<div class="col-sm-1">';
+            $html .= '<span class="font-weight-bold">Numero</span>';
+            $html .= '</div>';
+
+            $html .= '<div class="col-sm-2">';
+            $html .= '<span class="font-weight-bold">Modifica</span>';
+            $html .= '</div>';
+
+            $html .= '</div>';
             
             if (count($results) > 0) {
                 foreach ($results as $booking) {
-                    
-                    $html .= '<div class="row">';
-    
-                    $html .= '<div class="col-sm-3">' . $booking->status . '</div>';
-                    $html .= '<div class="col-sm-3">' . $booking->time . '</div>';
+                    $html .= '<div class="row mt-2">';
+            
+                    $html .= '<div class="col-sm-1">' . ($booking->status == 'confirmed' ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-times text-warning"></i>') . '</div>';
                     $html .= '<div class="col-sm-3">' . $booking->identification . '</div>';
-                    $html .= '<div class="col-sm-3">' . $booking->participants . '</div>';
+                    $html .= '<div class="col-sm-2">' . $booking->phone . '</div>';
+                    $html .= '<div class="col-sm-1">' . date("H:i", strtotime($booking->time_booking)) . '</div>';
                     
+                    $html .= '<div class="col-sm-1">' . $booking->participants . '</div>';
+            
+                    $html .= '<div class="col-sm-2"><button onclick="RetrieveBooking(this)" class="btn btn-primary edit-booking" data-booking-id="' . $booking->id . '">Edit</button></div>';
+            
                     $html .= '</div>'; 
                 }
-                
             } else {
-                $html .= "no booking for this day found";
+                $html .= "No bookings for this day found";
             }
+            
             
             echo $html;
             exit();
@@ -248,12 +239,19 @@ class Tf_Ipf_Calendar {
     * Registered action to output full calendar
     */
     public function get_calendar_html() {
-
-        $calendar_events = $this->_ipfDatabase->tfIpf_event_query_list();
-        $html = $this->tfIpf_render_events_list($calendar_events);
-        echo $html;
-        exit();
+        
+        if(isset($_POST['maxnum']))
+        {
+            $maxnum = sanitize_text_field($_POST['maxnum']);
+            $calendar_events = $this->_ipfDatabase->tfIpf_event_query_list(intval($maxnum));
+            $html = $this->tfIpf_render_events_list($calendar_events);
+            echo $html;
+            exit();
+        }
+        
     }
+
+    
 
     function tfIpf_render_events_list($arra_event)
     {
@@ -340,6 +338,167 @@ class Tf_Ipf_Calendar {
         $current_month_number = (int) date('m', strtotime($ddate));
         return $months[$current_month_number - 1];
     }
+
+    public function tfipf_return_edit_booking_form_ajax()
+    {
+        $html = '';
+
+        if(isset($_POST["bookingid"]))
+        {
+            $bookingid = sanitize_text_field( $_POST['bookingid'] );
+
+            $booking = $this->tfIpf_return_booking_by_id(intval($bookingid));
+
+
+            $html = '
+                <form id="editBookingForm">
+                    <input type="hidden" value="'. $booking->id. '" id="bookingid" name="bookingid">
+                    <div class="form-group">
+                        <label for="time_booking">Orario:</label>
+                        <input type="time" class="form-control" value="'. date("H:i", strtotime($booking->time_booking)) . '" id="time_booking" name="time_booking">
+                    </div>
+                    <div class="form-group">
+                        <label for="identification">Nome prenotazione:</label>
+                        <input type="text" class="form-control" value="'. $booking->identification . '" id="identification" name="identification">
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Stato:</label>
+                        <input type="text" class="form-control" value="'. $booking->status . '" id="status" name="status">
+                    </div>
+                    <div class="form-group">
+                        <label for="participants">Numero partecipanti:</label>
+                        <input type="number" class="form-control" value="'. $booking->participants . '" id="participants" name="participants">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Numero di telefono:</label>
+                        <input type="text" class="form-control" value="'.  $booking->phone . '" id="phone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="date_id">Data prenotazione:</label>
+                        <input type="date" class="form-control" value="'. date('Y-m-d', $booking->date_id) . '" id="date_id" name="date_id">
+                    </div>
+                    <div class="form-group">
+                        <label for="code">Code:</label>
+                        <input class="form-control" value="'. $booking->code . '" id="code" name="code" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="post_event_id">Post Event id:</label>
+                        <input type="number" class="form-control" value="'. $booking->post_event_id . '" id="post_event_id" name="post_event_id">
+                    </div>
+                    <div class="form-group">
+                        <label for="extra_message">Extra Message:</label>
+                        <textarea class="form-control"  id="extra_message" name="extra_message">'. $booking->extra_message . '</textarea>
+                    </div>
+                    
+                    <button type="button" onclick="save_edit_form_data()" class="btn btn-primary">Salva le Modifiche</button>
+                </form>
+            ';
+
+
+            $response = array(
+                'succeded' => 1,
+                'htmlToPrint' => $html
+            );
+
+            $encoded_answer = json_encode($response);
+            header('Content-Type: application/json');
+
+            echo $encoded_answer;
+            exit();
+        }
+        
+
+        
+    } 
+
+
+    public function tfIpf_return_booking_by_id($bookingid)
+    {
+        global $wpdb;
+
+        $query = $wpdb->prepare("
+            SELECT *
+            FROM {$wpdb->prefix}ipf_bookings
+            WHERE id = %d
+        ", $bookingid);
+
+        $booking = $wpdb->get_row($query);
+
+        if ($booking) {
+            
+            return $booking;
+
+        } else {
+            
+            return false;
+        }
+    }
+
+    public function ifpsave_edit_booking()
+    {
+        if (isset($_POST['formData'])) {
+            $formData = json_decode(stripslashes($_POST['formData']), true);
+    
+            $booking = new stdClass();
+            $booking->id = intval($formData['bookingid']);
+            $booking->post_event_id = intval($formData['post_event_id']);
+            $booking->identification = $formData['identification'];
+            $booking->participants = intval($formData['participants']);
+            $booking->phone = $formData['phone'];
+            $booking->extra_message= $formData['extra_message'];
+
+            //check if update this
+            $booking->code = $formData['code'];
+            
+            $booking->status  = $formData['status'];
+            $booking->time_booking = date("H:i", strtotime($formData['time_booking']));
+            $booking->date_id = strtotime($formData['date_id']);
+
+        
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'ipf_bookings';
+
+            $$result = $wpdb->update(
+                $table_name,
+                (array) $booking,
+                array('id' => $booking->id),
+                array(
+                    '%d', 
+                    '%d', 
+                    '%s', 
+                    '%d', 
+                    '%s', 
+                    '%s', 
+                    '%s', 
+                    '%s', 
+                    '%s', 
+                    '%d'  
+                ),
+            );
+
+
+            if ($result === false) {
+
+                echo "error";
+
+            } else {
+                $response = array(
+                    'success' => true,
+                    'htmlToPrint' => 'Booking data saved successfully'
+                );
+        
+                wp_send_json($response); // Send JSON response back to the client
+            }
+            
+
+           
+        }
+    
+        exit();
+    }
+
 
 
 }
